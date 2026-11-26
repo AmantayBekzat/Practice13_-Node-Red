@@ -1,0 +1,10 @@
+[
+  {"id":"T1","case":"Valid free interval","input":{"start":660,"duration":60,"blocked":false},"expected":{"available":true,"reasonCode":"AVAILABLE"}},
+  {"id":"T2","case":"Overlap with existing booking","input":{"start":570,"duration":60,"blocked":false},"expected":{"available":false,"reasonCode":"OVERLAP"}},
+  {"id":"T3","case":"Blocked room","input":{"start":660,"duration":60,"blocked":true},"expected":{"available":false,"reasonCode":"BLOCKED"}},
+  {"id":"T4","case":"Duration equals zero","input":{"start":660,"duration":0,"blocked":false},"expected":{"available":false,"reasonCode":"INVALID_DURATION"}},
+  {"id":"T5","case":"Duration is 121 minutes","input":{"start":660,"duration":121,"blocked":false},"expected":{"available":false,"reasonCode":"INVALID_DURATION"}},
+  {"id":"T6","case":"Start is in the past","input":{"start":510,"duration":30,"blocked":false},"expected":{"available":false,"reasonCode":"PAST_START"}},
+  {"id":"T7","case":"Adjacent interval starts at booking end","input":{"start":600,"duration":30,"blocked":false},"expected":{"available":true,"reasonCode":"AVAILABLE"}},
+  {"id":"T8","case":"Bookings unchanged after all checks","operation":"integrity","expected":{"unchanged":true}}
+]

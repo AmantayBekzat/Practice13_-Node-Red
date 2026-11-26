@@ -1,0 +1,486 @@
+[
+  {
+    "id": "campus12",
+    "type": "tab",
+    "label": "Smart Campus - Practice 12",
+    "disabled": false,
+    "info": "Real Node-RED low-code implementation. Core Switch and Change nodes, JSONata expressions, no Function nodes. Fixed demo clock 09:00, Newton 101 fixtures from frozen Practice 11."
+  },
+  {
+    "id": "check-in",
+    "type": "http in",
+    "z": "campus12",
+    "name": "POST /api/check",
+    "x": 130,
+    "y": 140,
+    "wires": [
+      [
+        "fixture"
+      ]
+    ],
+    "url": "/api/check",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": ""
+  },
+  {
+    "id": "fixture",
+    "type": "change",
+    "z": "campus12",
+    "name": "Fixed room + bookings",
+    "x": 360,
+    "y": 140,
+    "wires": [
+      [
+        "types"
+      ]
+    ],
+    "rules": [
+      {
+        "t": "set",
+        "p": "fixture",
+        "pt": "msg",
+        "to": "{\"clock\": {\"label\": \"Fixed demo day, 09:00 (not the device clock)\", \"now\": 540}, \"room\": {\"id\": \"r1\", \"name\": \"Newton 101\", \"building\": \"Science Block\", \"capacity\": 40, \"blocked\": false}, \"bookings\": [{\"id\": \"b1\", \"room\": \"r1\", \"start\": 540, \"end\": 600}, {\"id\": \"b2\", \"room\": \"r1\", \"start\": 810, \"end\": 900}]}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false
+  },
+  {
+    "id": "types",
+    "type": "switch",
+    "z": "campus12",
+    "name": "1. Valid types?",
+    "x": 600,
+    "y": 140,
+    "wires": [
+      [
+        "duration"
+      ],
+      [
+        "out-invalid"
+      ]
+    ],
+    "property": "($type(payload) = \"object\") ? (($type(payload.start) = \"number\" and $type(payload.duration) = \"number\" and $type(payload.blocked) = \"boolean\") ? (payload.start = $floor(payload.start) and payload.duration = $floor(payload.duration)) : false) : false",
+    "propertyType": "jsonata",
+    "rules": [
+      {
+        "t": "true"
+      },
+      {
+        "t": "else"
+      }
+    ],
+    "checkall": "false",
+    "repair": false,
+    "outputs": 2
+  },
+  {
+    "id": "duration",
+    "type": "switch",
+    "z": "campus12",
+    "name": "2. Duration 1-120?",
+    "x": 840,
+    "y": 140,
+    "wires": [
+      [
+        "window"
+      ],
+      [
+        "out-duration"
+      ]
+    ],
+    "property": "payload.duration > 0 and payload.duration <= 120",
+    "propertyType": "jsonata",
+    "rules": [
+      {
+        "t": "true"
+      },
+      {
+        "t": "else"
+      }
+    ],
+    "checkall": "false",
+    "repair": false,
+    "outputs": 2
+  },
+  {
+    "id": "window",
+    "type": "switch",
+    "z": "campus12",
+    "name": "3. Within day?",
+    "x": 1080,
+    "y": 140,
+    "wires": [
+      [
+        "future"
+      ],
+      [
+        "out-window"
+      ]
+    ],
+    "property": "payload.start >= 0 and payload.start + payload.duration <= 1440",
+    "propertyType": "jsonata",
+    "rules": [
+      {
+        "t": "true"
+      },
+      {
+        "t": "else"
+      }
+    ],
+    "checkall": "false",
+    "repair": false,
+    "outputs": 2
+  },
+  {
+    "id": "future",
+    "type": "switch",
+    "z": "campus12",
+    "name": "4. After 09:00?",
+    "x": 1320,
+    "y": 140,
+    "wires": [
+      [
+        "blocked"
+      ],
+      [
+        "out-past"
+      ]
+    ],
+    "property": "payload.start > fixture.clock.now",
+    "propertyType": "jsonata",
+    "rules": [
+      {
+        "t": "true"
+      },
+      {
+        "t": "else"
+      }
+    ],
+    "checkall": "false",
+    "repair": false,
+    "outputs": 2
+  },
+  {
+    "id": "blocked",
+    "type": "switch",
+    "z": "campus12",
+    "name": "5. Blocked?",
+    "x": 1320,
+    "y": 270,
+    "wires": [
+      [
+        "out-blocked"
+      ],
+      [
+        "overlap"
+      ]
+    ],
+    "property": "payload.blocked",
+    "propertyType": "jsonata",
+    "rules": [
+      {
+        "t": "true"
+      },
+      {
+        "t": "else"
+      }
+    ],
+    "checkall": "false",
+    "repair": false,
+    "outputs": 2
+  },
+  {
+    "id": "overlap",
+    "type": "switch",
+    "z": "campus12",
+    "name": "6. Overlap?",
+    "x": 1080,
+    "y": 270,
+    "wires": [
+      [
+        "out-overlap"
+      ],
+      [
+        "out-available"
+      ]
+    ],
+    "property": "($s := payload.start; $e := $s + payload.duration; $count(fixture.bookings[start < $e and end > $s]) > 0)",
+    "propertyType": "jsonata",
+    "rules": [
+      {
+        "t": "true"
+      },
+      {
+        "t": "else"
+      }
+    ],
+    "checkall": "false",
+    "repair": false,
+    "outputs": 2
+  },
+  {
+    "id": "out-invalid",
+    "type": "change",
+    "z": "campus12",
+    "name": "INVALID_INPUT",
+    "x": 150,
+    "y": 430,
+    "wires": [
+      [
+        "response"
+      ]
+    ],
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "{\"available\": false, \"reasonCode\": \"INVALID_INPUT\", \"message\": \"Enter a valid start time, whole-minute duration and room status.\"}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false
+  },
+  {
+    "id": "out-duration",
+    "type": "change",
+    "z": "campus12",
+    "name": "INVALID_DURATION",
+    "x": 390,
+    "y": 430,
+    "wires": [
+      [
+        "response"
+      ]
+    ],
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "{\"available\": false, \"reasonCode\": \"INVALID_DURATION\", \"message\": \"Duration must be a whole number from 1 to 120 minutes.\"}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false
+  },
+  {
+    "id": "out-window",
+    "type": "change",
+    "z": "campus12",
+    "name": "INVALID_WINDOW",
+    "x": 630,
+    "y": 430,
+    "wires": [
+      [
+        "response"
+      ]
+    ],
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "{\"available\": false, \"reasonCode\": \"INVALID_WINDOW\", \"message\": \"Choose an interval within the demo day (00:00 to 24:00).\"}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false
+  },
+  {
+    "id": "out-past",
+    "type": "change",
+    "z": "campus12",
+    "name": "PAST_START",
+    "x": 870,
+    "y": 430,
+    "wires": [
+      [
+        "response"
+      ]
+    ],
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "{\"available\": false, \"reasonCode\": \"PAST_START\", \"message\": \"Start time must be after the fixed demo time, 09:00.\"}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false
+  },
+  {
+    "id": "out-blocked",
+    "type": "change",
+    "z": "campus12",
+    "name": "BLOCKED",
+    "x": 1110,
+    "y": 430,
+    "wires": [
+      [
+        "response"
+      ]
+    ],
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "{\"available\": false, \"reasonCode\": \"BLOCKED\", \"message\": \"Newton 101 is blocked and cannot be booked.\"}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false
+  },
+  {
+    "id": "out-overlap",
+    "type": "change",
+    "z": "campus12",
+    "name": "OVERLAP",
+    "x": 1350,
+    "y": 430,
+    "wires": [
+      [
+        "response"
+      ]
+    ],
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "{\"available\": false, \"reasonCode\": \"OVERLAP\", \"message\": \"The requested interval overlaps an existing booking.\"}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false
+  },
+  {
+    "id": "out-available",
+    "type": "change",
+    "z": "campus12",
+    "name": "AVAILABLE",
+    "x": 1080,
+    "y": 550,
+    "wires": [
+      [
+        "response"
+      ]
+    ],
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "{\"available\": true, \"reasonCode\": \"AVAILABLE\", \"message\": \"Newton 101 is available for this interval.\"}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false
+  },
+  {
+    "id": "response",
+    "type": "http response",
+    "z": "campus12",
+    "name": "JSON decision (read only)",
+    "x": 680,
+    "y": 650,
+    "wires": [],
+    "statusCode": "200",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  {
+    "id": "fixture-in",
+    "type": "http in",
+    "z": "campus12",
+    "name": "GET /api/fixture",
+    "x": 160,
+    "y": 760,
+    "wires": [
+      [
+        "fixture-response-data"
+      ]
+    ],
+    "url": "/api/fixture",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": ""
+  },
+  {
+    "id": "fixture-response-data",
+    "type": "change",
+    "z": "campus12",
+    "name": "Read-only fixture",
+    "x": 410,
+    "y": 760,
+    "wires": [
+      [
+        "fixture-response"
+      ]
+    ],
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "{\"clock\": {\"label\": \"Fixed demo day, 09:00 (not the device clock)\", \"now\": 540}, \"room\": {\"id\": \"r1\", \"name\": \"Newton 101\", \"building\": \"Science Block\", \"capacity\": 40, \"blocked\": false}, \"bookings\": [{\"id\": \"b1\", \"room\": \"r1\", \"start\": 540, \"end\": 600}, {\"id\": \"b2\", \"room\": \"r1\", \"start\": 810, \"end\": 900}]}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false
+  },
+  {
+    "id": "fixture-response",
+    "type": "http response",
+    "z": "campus12",
+    "name": "JSON fixture",
+    "x": 660,
+    "y": 760,
+    "wires": [],
+    "statusCode": "200",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+]
